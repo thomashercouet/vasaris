@@ -416,6 +416,31 @@ window.addEventListener('keydown', ev => {
   if (ev.key === 'ArrowRight' && current < maxReached) loadLevel(current + 1);
 });
 
+function pointerPos(ev) {
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  return { px: (ev.clientX - rect.left) * scale, py: (ev.clientY - rect.top) * scale };
+}
+
+canvas.addEventListener('pointermove', ev => {
+  const { px, py } = pointerPos(ev);
+  hover = anim ? null : nearestBorder(px, py, game, geo());
+});
+
+canvas.addEventListener('pointerdown', ev => {
+  if (anim) return;
+  const { px, py } = pointerPos(ev);
+  const border = nearestBorder(px, py, game, geo());
+  if (border) startSwap(border);
+});
+
+function startSwap(border) {
+  const result = game.swap(border);
+  if (!result) return;
+  hover = null;
+  if (game.isWon()) onWin();
+}
+
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(innerWidth * dpr);
