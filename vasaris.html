@@ -367,18 +367,45 @@ function drawDisc(cx, cy, size, color) {
 function render(now) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const g = geo();
+  const isPending = (x, y) => anim !== null && anim.resolved.some(p => p.x === x && p.y === y);
+  const inSwapMove = (x, y) => anim !== null && anim.phase === 'swap' &&
+    anim.moves.some(m => (m.to.x === x && m.to.y === y));
+
   for (let y = 0; y < game.height; y++) {
     for (let x = 0; x < game.width; x++) {
       const r = cellRect(x, y, g);
       ctx.fillStyle = '#101010'; // emplacement : les trous restent visibles
       ctx.fillRect(r.x, r.y, r.w, r.h);
       const c = game.cell(x, y);
-      if (!c.active) continue;
-      ctx.fillStyle = shade(COLORS[c.caseColor], 0.45); // case = teinte assombrie
+
+      if (anim && anim.phase === 'resolve' && isPending(x, y)) {
+        // flash blanc léger + fondu vers le noir
+        const t = Math.min(1, (now - anim.start) / RESOLVE_MS);
+        ctx.fillStyle = shade(COLORS[c.caseColor], 0.45 * (1 - t));
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.fillStyle = `rgba(255,255,255,${(0.7 * (1 - t)).toFixed(3)})`;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        continue;
+      }
+
+      // pendant la phase swap, une cellule logiquement résolue reste dessinée
+      if (!c.active && !(anim && anim.phase === 'swap' && isPending(x, y))) continue;
+
+      ctx.fillStyle = shade(COLORS[c.caseColor], 0.45);
       ctx.fillRect(r.x, r.y, r.w, r.h);
-      drawDisc(r.x + r.w / 2, r.y + r.h / 2, g.size, c.discColor); // disque = teinte vive
+      if (!inSwapMove(x, y)) drawDisc(r.x + r.w / 2, r.y + r.h / 2, g.size, c.discColor);
     }
   }
+
+  if (anim && anim.phase === 'swap') {
+    const e = easeInOut(Math.min(1, (now - anim.start) / SWAP_MS));
+    for (const m of anim.moves) {
+      const from = cellCenter(m.from, g);
+      const to = cellCenter(m.to, g);
+      drawDisc(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e, g.size, m.color);
+    }
+  }
+
   if (hover && !anim) {
     const { mx, my } = borderMidpoint(hover, g);
     const inset = g.size * 0.18;
@@ -435,10 +462,19 @@ canvas.addEventListener('pointerdown', ev => {
 });
 
 function startSwap(border) {
+  const n = game.neighbor(border);
+  const a = { x: border.x, y: border.y };
+  const da = game.cell(a.x, a.y).discColor;
+  const db = game.cell(n.x, n.y).discColor;
   const result = game.swap(border);
   if (!result) return;
   hover = null;
-  if (game.isWon()) onWin();
+  anim = {
+    phase: 'swap',
+    start: performance.now(),
+    moves: [{ from: a, to: n, color: da }, { from: n, to: a, color: db }],
+    resolved: result.resolved,
+  };
 }
 
 function resize() {
@@ -450,7 +486,20 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
+function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); }
+
 function tick(now) {
+  if (anim) {
+    const dur = anim.phase === 'swap' ? SWAP_MS : RESOLVE_MS;
+    if (now - anim.start >= dur) {
+      if (anim.phase === 'swap' && anim.resolved.length > 0) {
+        anim = { phase: 'resolve', start: now, moves: [], resolved: anim.resolved };
+      } else {
+        anim = null;
+        if (game.isWon()) onWin();
+      }
+    }
+  }
   render(now);
   requestAnimationFrame(tick);
 }
