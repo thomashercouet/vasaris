@@ -37,6 +37,10 @@
     color: #ccc; font: inherit; font-size: 16px; cursor: pointer; padding: 0; }
   #levels button.done { border-color: #2ECC40; color: #2ECC40; }
   #levels button:disabled { opacity: 0.25; cursor: default; }
+  #play { background: none; border: 2px solid #ccc; color: #eee; font: inherit;
+    font-size: 24px; letter-spacing: 8px; text-indent: 8px; padding: 16px 52px;
+    cursor: pointer; }
+  #play:hover { background: #1a1a1a; }
   #options { display: flex; gap: 14px; }
   #options button { background: none; border: 1px solid #444; color: #ccc;
     font: inherit; font-size: 14px; padding: 10px 16px; cursor: pointer; }
@@ -54,6 +58,7 @@
     #levels { grid-template-columns: repeat(5, 60px); gap: 12px; }
     #levels button { width: 60px; height: 60px; font-size: 18px; }
     #options button { font-size: 16px; padding: 12px 18px; }
+    #play { font-size: 28px; padding: 18px 60px; }
   }
 </style>
 </head>
@@ -67,6 +72,7 @@
 <div id="counter"></div>
 <div id="home">
   <h1>VASARIS</h1>
+  <button id="play">JOUER</button>
   <div id="levels"></div>
   <div id="options">
     <button id="opt-sound">SON : OUI</button>
@@ -627,6 +633,7 @@ function onWin() {
 
 document.getElementById('restart').addEventListener('click', () => loadLevel(current));
 document.getElementById('home-btn').addEventListener('click', showHome);
+document.getElementById('play').addEventListener('click', () => loadLevel(0));
 document.getElementById('replay').addEventListener('click', () => {
   overlay.style.display = 'none';
   showHome();
