@@ -507,6 +507,15 @@ function tick(now) {
 resize();
 loadLevel(0);
 requestAnimationFrame(tick);
+
+if (location.search.includes('test')) {
+  const banner = document.getElementById('banner');
+  banner.style.display = 'block';
+  const lines = [];
+  const failures = runTests(msg => { lines.push(msg); console.log(msg); });
+  lines.push(failures ? `${failures} ÉCHEC(S)` : 'TOUS LES TESTS PASSENT');
+  banner.textContent = lines.join('\n');
+}
 </script>
 </body>
 </html>
