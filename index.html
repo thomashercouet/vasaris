@@ -32,9 +32,10 @@
     justify-content: center; align-items: center; gap: 30px; z-index: 2; }
   #home h1 { font-size: 44px; letter-spacing: 14px; font-weight: normal; margin: 0;
     color: #eee; text-indent: 14px; }
-  #levels { display: grid; grid-template-columns: repeat(5, 54px); gap: 10px; }
-  #levels button { width: 54px; height: 54px; background: none; border: 1px solid #444;
-    color: #ccc; font: inherit; font-size: 16px; cursor: pointer; padding: 0; }
+  #levels { display: grid; grid-template-columns: repeat(10, 46px); gap: 8px;
+    max-height: 44vh; overflow-y: auto; padding: 4px; }
+  #levels button { width: 46px; height: 46px; background: none; border: 1px solid #444;
+    color: #ccc; font: inherit; font-size: 14px; cursor: pointer; padding: 0; }
   #levels button.done { border-color: #2ECC40; color: #2ECC40; }
   #levels button:disabled { opacity: 0.25; cursor: default; }
   #play { background: none; border: 2px solid #ccc; color: #eee; font: inherit;
@@ -55,8 +56,8 @@
   @media (pointer: coarse) {
     #hud { gap: 20px; }
     #hud button { font-size: 24px; padding: 12px 26px; }
-    #levels { grid-template-columns: repeat(5, 60px); gap: 12px; }
-    #levels button { width: 60px; height: 60px; font-size: 18px; }
+    #levels { grid-template-columns: repeat(5, 54px); gap: 10px; max-height: 38vh; }
+    #levels button { width: 54px; height: 54px; font-size: 16px; }
     #options button { font-size: 16px; padding: 12px 18px; }
     #play { font-size: 28px; padding: 18px 60px; }
   }
@@ -66,7 +67,7 @@
 <canvas id="board"></canvas>
 <div id="hud">
   <button id="home-btn" title="Accueil">⌂</button>
-  <span id="level-label">NIVEAU 1/20</span>
+  <span id="level-label">NIVEAU 1/50</span>
   <button id="restart" title="Recommencer">⟲</button>
 </div>
 <div id="counter"></div>
@@ -291,6 +292,96 @@ const LEVELS = [
                { x: 4, y: 4, dir: 'H' }, { x: 3, y: 4, dir: 'H' }, { x: 2, y: 4, dir: 'H' },
                { x: 1, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 1, dir: 'H' },
                { x: 4, y: 1, dir: 'H' }] },
+  // 21 — 4x6 vertical, 5 couleurs, 0 trous (généré, solution 17 coups)
+  { rows: ['RGGRGBBR', 'PRRPYGRY', 'RBGRYGBY', 'RYYRRBGR', 'YBRPPBPG', 'BGGRBYBP'],
+    solution: [{ x: 0, y: 1, dir: 'H' }, { x: 0, y: 5, dir: 'H' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 4, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 1, y: 3, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 0, y: 0, dir: 'H' }] },
+  // 22 — 4x6 vertical, 5 couleurs, 0 trous (généré, solution 15 coups)
+  { rows: ['YPRYGYRP', 'PBBRYGPR', 'YPPYYBBY', 'GPGRRBPR', 'BGYGBRBP', 'PBRYRGGB'],
+    solution: [{ x: 1, y: 3, dir: 'V' }, { x: 1, y: 4, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 2, y: 3, dir: 'V' }] },
+  // 23 — 4x6 vertical, 5 couleurs, 2 trous (généré, solution 14 coups)
+  { rows: ['YGGY..RP', 'RYYBBPGR', 'PGGBPRPG', 'YPYBRPPG', 'BYBYGR..', 'RBBRPBBP'],
+    solution: [{ x: 0, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 1, y: 3, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 3, y: 0, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 1, y: 1, dir: 'H' }, { x: 0, y: 1, dir: 'H' }, { x: 2, y: 5, dir: 'H' }, { x: 0, y: 5, dir: 'H' }] },
+  // 24 — 4x6 vertical, 5 couleurs, 2 trous (généré, solution 14 coups)
+  { rows: ['..GPYRRY', 'PBPGGBYG', 'YPRYGPPY', 'GRBRPGBP', 'BGPBRP..', 'GPPGYPPY'],
+    solution: [{ x: 0, y: 1, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 1, y: 4, dir: 'H' }, { x: 0, y: 5, dir: 'H' }, { x: 2, y: 1, dir: 'H' }, { x: 3, y: 1, dir: 'V' }, { x: 3, y: 2, dir: 'V' }] },
+  // 25 — 4x6 vertical, 5 couleurs, 2 trous (généré, solution 14 coups)
+  { rows: ['YRRYRBRB', 'PGGBYRBR', 'BP..GYBG', 'PYGBBYYG', 'YPBRPGBP', '..RBGRRB'],
+    solution: [{ x: 2, y: 4, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 1, y: 3, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 0, y: 1, dir: 'V' }] },
+  // 26 — 4x7 vertical, 5 couleurs, 2 trous (généré, solution 17 coups)
+  { rows: ['YBPYYGBY', 'RBBPRYPB', 'BPPRYRGP', '..GBBYYG', 'GYYGGPPB', 'YGRYYG..', 'GYBRGYYG'],
+    solution: [{ x: 0, y: 5, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 1, y: 3, dir: 'H' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 1, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 2, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 2, y: 1, dir: 'V' }] },
+  // 27 — 4x7 vertical, 5 couleurs, 3 trous (généré, solution 16 coups)
+  { rows: ['PRRYYBBP', 'GRYBBPPY', 'RGGPPRRY', 'RBBRRBYB', 'BRGRRGBG', 'PGGBBP..', 'GRRG....'],
+    solution: [{ x: 1, y: 5, dir: 'H' }, { x: 0, y: 5, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 2, dir: 'V' }, { x: 2, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 1, y: 4, dir: 'H' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 1, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 3, dir: 'H' }] },
+  // 28 — 4x7 vertical, 5 couleurs, 2 trous (généré, solution 17 coups)
+  { rows: ['RBBPPGGR', '....PYGP', 'RPPRYRRG', 'RBYRPRYP', 'BYRGRPGY', 'GRGBBRBG', 'RGGRRGPB'],
+    solution: [{ x: 1, y: 6, dir: 'H' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 3, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 5, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 3, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }] },
+  // 29 — 4x7 vertical, 5 couleurs, 3 trous (généré, solution 16 coups)
+  { rows: ['GBPGGBBR', 'BRRPPYRG', 'GYRYRPYR', 'YGYRPY..', '..PGBPPB', '..GPYBBG', 'YPPYYPGY'],
+    solution: [{ x: 0, y: 6, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'V' }, { x: 2, y: 6, dir: 'H' }, { x: 3, y: 5, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 1, y: 4, dir: 'V' }] },
+  // 30 — 4x7 vertical, 5 couleurs, 2 trous (généré, solution 16 coups)
+  { rows: ['YBRBBR..', 'RYYRRGYB', 'BRBYGBBY', 'YPPBBYYB', 'BY..RPPR', 'RBRYYRGY', 'PRGPBGYG'],
+    solution: [{ x: 1, y: 1, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 6, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 2, y: 3, dir: 'H' }, { x: 1, y: 5, dir: 'H' }, { x: 3, y: 5, dir: 'V' }, { x: 0, y: 3, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }] },
+  // 31 — 5x7 vertical, 6 couleurs, 2 trous (généré, solution 22 coups)
+  { rows: ['BY..PRRPBC', 'YBPCCPBCCB', 'CPCPPYYGGB', 'RCGCCRYRPY', 'PRYGRYRBBP', 'PYPYRPPY..', 'YPYGGRCPYC'],
+    solution: [{ x: 4, y: 3, dir: 'V' }, { x: 3, y: 4, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 0, y: 0, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 0, y: 5, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 3, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 1, y: 1, dir: 'V' }, { x: 2, y: 5, dir: 'V' }, { x: 1, y: 6, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 3, y: 5, dir: 'V' }, { x: 3, y: 6, dir: 'H' }, { x: 4, y: 0, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }] },
+  // 32 — 5x7 vertical, 6 couleurs, 3 trous (généré, solution 21 coups)
+  { rows: ['RPCRRPBRGC', 'PGYCGYYBCG', 'GY..PGYCCY', 'GPPGBCYPPY', '..PRYBYC..', 'CBRPCYRYBR', 'BCCRRCCGGB'],
+    solution: [{ x: 1, y: 4, dir: 'V' }, { x: 4, y: 0, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 5, dir: 'H' }, { x: 4, y: 5, dir: 'V' }, { x: 3, y: 6, dir: 'H' }, { x: 0, y: 3, dir: 'H' }, { x: 0, y: 5, dir: 'V' }, { x: 1, y: 6, dir: 'H' }, { x: 3, y: 3, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 2, y: 1, dir: 'V' }] },
+  // 33 — 5x7 vertical, 6 couleurs, 4 trous (généré, solution 18 coups)
+  { rows: ['PYCPYCYPCR', 'BYYB..PYRC', 'GC..BR..YR', 'YGRGGBRBBY', 'CYGBBGGY..', 'RBCPYPPGYP', 'BRPCYGGYPY'],
+    solution: [{ x: 4, y: 2, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 3, y: 0, dir: 'V' }, { x: 4, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 2, y: 2, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 0, y: 1, dir: 'H' }, { x: 3, y: 4, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 1, y: 4, dir: 'H' }, { x: 4, y: 5, dir: 'V' }] },
+  // 34 — 5x7 vertical, 6 couleurs, 2 trous (généré, solution 22 coups)
+  { rows: ['PC..RPPR..', 'BPCRYBCYGY', 'GBRGBRRCYG', 'RCRGGRGYYB', 'CRPCCPBGYB', 'GBBYCRBCRY', 'CGYCRBBPPR'],
+    solution: [{ x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 1, y: 1, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 0, y: 5, dir: 'H' }, { x: 1, y: 3, dir: 'H' }, { x: 4, y: 1, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 3, y: 3, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 2, y: 5, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 4, y: 4, dir: 'V' }, { x: 4, y: 5, dir: 'V' }, { x: 3, y: 6, dir: 'H' }] },
+  // 35 — 5x7 vertical, 6 couleurs, 3 trous (généré, solution 19 coups)
+  { rows: ['CYPC..GPPB', 'YPBRCRRCBG', 'RGRBGBBRRC', 'GR..CGGPPG', 'RCCBYCCY..', 'BRCGCRRCYR', 'BCGBPYYPRY'],
+    solution: [{ x: 4, y: 0, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 4, y: 5, dir: 'V' }, { x: 1, y: 1, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 2, y: 1, dir: 'H' }, { x: 3, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'V' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }] },
+  // 36 — 5x8 vertical, 6 couleurs, 3 trous (généré, solution 27 coups)
+  { rows: ['YRRGYGRYGB', 'BYBRGB..RG', 'GBCPPGGCYR', 'RPCRPGGBPY', 'PCYCYPBYCP', 'BYRYCR..BC', 'YRRBRYBR..', 'CBBGGCCBYC'],
+    solution: [{ x: 1, y: 1, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 0, y: 6, dir: 'H' }, { x: 0, y: 5, dir: 'V' }, { x: 1, y: 7, dir: 'H' }, { x: 0, y: 7, dir: 'H' }, { x: 4, y: 0, dir: 'V' }, { x: 4, y: 1, dir: 'V' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 3, dir: 'V' }, { x: 4, y: 4, dir: 'V' }, { x: 1, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 2, y: 6, dir: 'H' }, { x: 3, y: 6, dir: 'V' }, { x: 3, y: 7, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 2, y: 3, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 3, dir: 'H' }] },
+  // 37 — 5x8 vertical, 6 couleurs, 4 trous (généré, solution 27 coups)
+  { rows: ['RCCGGBYGGR', 'RGRBBYCYRC', 'GYBRYP..GC', 'YB..PRBGCB', 'BPPCCRRCPR', 'BYYB..CGGP', 'GBBPPCCB..', 'YGRYCRGCBG'],
+    solution: [{ x: 1, y: 1, dir: 'V' }, { x: 3, y: 5, dir: 'H' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 4, dir: 'H' }, { x: 1, y: 7, dir: 'H' }, { x: 2, y: 6, dir: 'V' }, { x: 1, y: 6, dir: 'H' }, { x: 0, y: 6, dir: 'H' }, { x: 0, y: 6, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 4, y: 2, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 3, y: 6, dir: 'V' }, { x: 3, y: 7, dir: 'H' }, { x: 0, y: 5, dir: 'H' }, { x: 1, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 3, y: 1, dir: 'H' }] },
+  // 38 — 5x8 vertical, 6 couleurs, 5 trous (généré, solution 23 coups)
+  { rows: ['CYYCGPPGGP', '..RGPRRPYR', 'RGGB..PYBR', 'BRBRCB..YB', 'BPPYYCBCRY', 'PBGPYGGB..', 'PGRGCYBYYB', 'CPGCGPPG..'],
+    solution: [{ x: 1, y: 3, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 3, y: 1, dir: 'H' }, { x: 2, y: 7, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 3, y: 6, dir: 'H' }, { x: 3, y: 4, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 2, y: 5, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 7, dir: 'H' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 3, dir: 'V' }, { x: 1, y: 1, dir: 'H' }, { x: 2, y: 0, dir: 'V' }] },
+  // 39 — 5x8 vertical, 6 couleurs, 3 trous (généré, solution 24 coups)
+  { rows: ['CGGBBCGRPG', 'YPPRCBRYYP', 'BY..BPGCGB', 'RBGCPGCGBG', 'BPPRPGGPPG', 'YBRY....GP', 'RPCRRGBRCP', 'PGGCGRRBPC'],
+    solution: [{ x: 4, y: 2, dir: 'V' }, { x: 3, y: 1, dir: 'H' }, { x: 3, y: 0, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 1, y: 3, dir: 'H' }, { x: 2, y: 2, dir: 'V' }, { x: 2, y: 1, dir: 'V' }, { x: 4, y: 6, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 4, y: 4, dir: 'V' }, { x: 1, y: 4, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 6, dir: 'V' }, { x: 2, y: 6, dir: 'V' }, { x: 3, y: 6, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 0, y: 1, dir: 'H' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 3, y: 2, dir: 'V' }] },
+  // 40 — 5x8 vertical, 6 couleurs, 4 trous (généré, solution 24 coups)
+  { rows: ['BGGRRPPYPB', 'CBGPCGPCBP', 'YCCYYCBPPB', '..CPPGRCCR', 'BC..GRRCGC', 'CGGYYG..CG', 'GRYGPYGPCR', 'RYYPPB..RC'],
+    solution: [{ x: 1, y: 7, dir: 'H' }, { x: 0, y: 7, dir: 'H' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 3, y: 3, dir: 'H' }, { x: 2, y: 4, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 1, y: 1, dir: 'H' }, { x: 2, y: 1, dir: 'H' }, { x: 1, y: 6, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 4, y: 4, dir: 'V' }, { x: 4, y: 0, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 4, y: 6, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }] },
+  // 41 — 5x9 vertical, 6 couleurs, 4 trous (généré, solution 29 coups)
+  { rows: ['PYYCYBBP..', 'RPCRCYPCYR', 'BPPGGR..CY', 'RBGCCGGBBC', 'RGCG..BRRB', 'GYRCGRRGCP', 'YRGYPCCRBC', 'CBBGRPRBPB', 'RCYR..BPPR'],
+    solution: [{ x: 4, y: 5, dir: 'V' }, { x: 4, y: 6, dir: 'V' }, { x: 1, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 4, y: 1, dir: 'V' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 3, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 1, y: 6, dir: 'V' }, { x: 0, y: 7, dir: 'H' }, { x: 0, y: 7, dir: 'V' }, { x: 0, y: 8, dir: 'H' }, { x: 0, y: 5, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 3, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 8, dir: 'H' }, { x: 3, y: 7, dir: 'V' }, { x: 2, y: 6, dir: 'H' }, { x: 2, y: 6, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }] },
+  // 42 — 5x9 vertical, 6 couleurs, 5 trous (généré, solution 27 coups)
+  { rows: ['BCBRYBBPPB', 'CBRYRGGR..', 'GBBGBYRYYR', 'PCGPYBCRPC', 'CBGB..RYBP', 'BGBYBP..YB', 'RCYRPGGYYB', 'CPPGCP....', 'GYYGPBBRRC'],
+    solution: [{ x: 0, y: 0, dir: 'V' }, { x: 3, y: 3, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 4, y: 3, dir: 'V' }, { x: 4, y: 4, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 0, y: 7, dir: 'H' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 5, dir: 'V' }, { x: 1, y: 4, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 3, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 3, y: 6, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 2, y: 5, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'V' }, { x: 3, y: 8, dir: 'H' }, { x: 2, y: 8, dir: 'H' }, { x: 2, y: 7, dir: 'V' }, { x: 0, y: 8, dir: 'H' }, { x: 0, y: 2, dir: 'H' }] },
+  // 43 — 5x9 vertical, 6 couleurs, 6 trous (généré, solution 26 coups)
+  { rows: ['GCYCPYCBBC', 'RGCRCPBYYR', '..RPPBCBRP', 'YB..BYGCPG', 'BYRGYG..PR', '..GRGRRBBP', 'YRGYCGBCRB', 'BRRB....CG', 'RBBRPGGPGC'],
+    solution: [{ x: 0, y: 7, dir: 'V' }, { x: 4, y: 7, dir: 'V' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 6, dir: 'H' }, { x: 2, y: 6, dir: 'H' }, { x: 3, y: 5, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 8, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 1, y: 7, dir: 'V' }, { x: 3, y: 1, dir: 'H' }, { x: 3, y: 1, dir: 'V' }, { x: 3, y: 2, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 4, y: 2, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 4, y: 4, dir: 'V' }, { x: 4, y: 5, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'V' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 1, y: 2, dir: 'H' }] },
+  // 44 — 5x9 vertical, 6 couleurs, 4 trous (généré, solution 29 coups)
+  { rows: ['RPPBPCPCCP', '..BRCPPG..', 'BYGPPRGYYP', 'YGYGRC..RC', 'GBBYCBYPCY', 'BGRYYRPRRY', 'GB..RBCGGR', 'YRRCPRPCYP', 'PYCPYPCYBC'],
+    solution: [{ x: 4, y: 5, dir: 'V' }, { x: 3, y: 6, dir: 'H' }, { x: 3, y: 6, dir: 'V' }, { x: 3, y: 7, dir: 'H' }, { x: 3, y: 2, dir: 'H' }, { x: 3, y: 1, dir: 'V' }, { x: 2, y: 6, dir: 'V' }, { x: 2, y: 7, dir: 'V' }, { x: 2, y: 8, dir: 'H' }, { x: 3, y: 8, dir: 'H' }, { x: 0, y: 5, dir: 'V' }, { x: 0, y: 7, dir: 'V' }, { x: 0, y: 8, dir: 'H' }, { x: 1, y: 7, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 3, y: 4, dir: 'H' }, { x: 4, y: 3, dir: 'V' }, { x: 1, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }] },
+  // 45 — 5x9 vertical, 6 couleurs, 5 trous (généré, solution 27 coups)
+  { rows: ['..CYRGGRBG', '..YCYGGCGB', 'GBBRYRCY..', 'CGRYRYCBBP', 'PCBRCBRCPC', 'YPRPPCCG..', 'RYPGRPGBYG', 'YGGRYRBYGY', 'GR..RGGYYR'],
+    solution: [{ x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 1, y: 6, dir: 'V' }, { x: 1, y: 6, dir: 'H' }, { x: 4, y: 0, dir: 'V' }, { x: 2, y: 7, dir: 'H' }, { x: 3, y: 6, dir: 'V' }, { x: 3, y: 5, dir: 'V' }, { x: 3, y: 4, dir: 'V' }, { x: 0, y: 7, dir: 'V' }, { x: 0, y: 6, dir: 'V' }, { x: 3, y: 8, dir: 'H' }, { x: 2, y: 8, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 4, y: 6, dir: 'V' }, { x: 4, y: 3, dir: 'V' }, { x: 3, y: 3, dir: 'H' }, { x: 2, y: 4, dir: 'V' }, { x: 1, y: 5, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 2, y: 2, dir: 'V' }] },
+  // 46 — 6x9 vertical, 6 couleurs, 5 trous (généré, solution 35 coups)
+  { rows: ['CRCRRCYPRYYG', 'RBBGYPPY..GC', 'BCGBPBGPPGCR', 'PRRYBCRYCRRB', 'BPYBCGGRPCBP', 'BCCB..CGGCBG', 'BYRBGRYB..GC', 'YG....BCPBCR', 'PYGPRGCRYPRY'],
+    solution: [{ x: 3, y: 0, dir: 'V' }, { x: 5, y: 3, dir: 'V' }, { x: 4, y: 3, dir: 'H' }, { x: 4, y: 3, dir: 'V' }, { x: 5, y: 1, dir: 'V' }, { x: 5, y: 0, dir: 'V' }, { x: 4, y: 0, dir: 'H' }, { x: 0, y: 8, dir: 'H' }, { x: 1, y: 8, dir: 'H' }, { x: 2, y: 8, dir: 'H' }, { x: 3, y: 7, dir: 'V' }, { x: 3, y: 6, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 1, y: 1, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 2, y: 4, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 2, y: 1, dir: 'V' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 1, y: 6, dir: 'H' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 1, y: 3, dir: 'V' }, { x: 0, y: 5, dir: 'H' }, { x: 4, y: 7, dir: 'V' }, { x: 4, y: 8, dir: 'H' }, { x: 5, y: 7, dir: 'V' }, { x: 5, y: 6, dir: 'V' }, { x: 5, y: 5, dir: 'V' }, { x: 3, y: 5, dir: 'H' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'V' }] },
+  // 47 — 6x9 vertical, 6 couleurs, 6 trous (généré, solution 32 coups)
+  { rows: ['RPPGCPPBBGGC', 'BRGRRCPCCPCY', 'GBGR..GYRGYG', 'PGRGCRYCGC..', 'GPYPPB..CGYP', 'GY..BYBGCBPY', 'YGCGGY..GCPB', 'PRRCYRPGRPBP', 'YP..BYGBRCCR'],
+    solution: [{ x: 4, y: 8, dir: 'H' }, { x: 3, y: 1, dir: 'H' }, { x: 1, y: 6, dir: 'H' }, { x: 1, y: 6, dir: 'V' }, { x: 0, y: 7, dir: 'H' }, { x: 0, y: 7, dir: 'V' }, { x: 3, y: 5, dir: 'H' }, { x: 4, y: 5, dir: 'V' }, { x: 4, y: 3, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 3, y: 2, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 5, y: 6, dir: 'V' }, { x: 5, y: 4, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 1, y: 2, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 1, y: 1, dir: 'H' }, { x: 2, y: 4, dir: 'V' }, { x: 1, y: 4, dir: 'H' }, { x: 2, y: 7, dir: 'V' }, { x: 2, y: 8, dir: 'H' }, { x: 3, y: 7, dir: 'V' }, { x: 3, y: 7, dir: 'H' }, { x: 5, y: 1, dir: 'V' }, { x: 5, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 3, dir: 'V' }] },
+  // 48 — 6x9 vertical, 6 couleurs, 7 trous (généré, solution 32 coups)
+  { rows: ['BCCBBRGBRGCY', '..GRRG..RCYB', 'YCPRYP..CRBP', 'CYRGCYGCCYPC', 'RPPYPY..PCBP', 'YR..CPGRRGYB', 'PCGPGCBGYB..', 'CYPRCYGCRGYG', 'YGRPYBBR..GY'],
+    solution: [{ x: 3, y: 5, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 1, y: 1, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 5, y: 7, dir: 'V' }, { x: 2, y: 8, dir: 'H' }, { x: 2, y: 7, dir: 'V' }, { x: 2, y: 7, dir: 'H' }, { x: 3, y: 7, dir: 'H' }, { x: 5, y: 2, dir: 'V' }, { x: 5, y: 1, dir: 'V' }, { x: 5, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 4, y: 3, dir: 'V' }, { x: 4, y: 4, dir: 'H' }, { x: 5, y: 4, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 7, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'V' }, { x: 2, y: 4, dir: 'V' }, { x: 2, y: 5, dir: 'V' }, { x: 2, y: 6, dir: 'H' }, { x: 3, y: 6, dir: 'H' }, { x: 4, y: 1, dir: 'V' }, { x: 0, y: 7, dir: 'V' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 6, dir: 'H' }] },
+  // 49 — 6x9 vertical, 6 couleurs, 5 trous (généré, solution 34 coups)
+  { rows: ['PBCPCBBRGBRG', 'BYYCBGGCRBCR', 'BCCYYG..BPGC', 'RB..GPPCPYYG', 'PRGCCYCPRBBR', 'YRRGBCCP..RY', 'CPPCRBPRBGYR', 'BGGPPB..GC..', 'CPPCGBBGCYYB'],
+    solution: [{ x: 3, y: 5, dir: 'V' }, { x: 2, y: 5, dir: 'H' }, { x: 2, y: 5, dir: 'V' }, { x: 4, y: 4, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 0, y: 0, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 4, y: 0, dir: 'H' }, { x: 5, y: 5, dir: 'V' }, { x: 0, y: 8, dir: 'H' }, { x: 1, y: 7, dir: 'H' }, { x: 0, y: 7, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 4, y: 3, dir: 'H' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 1, dir: 'V' }, { x: 4, y: 1, dir: 'H' }, { x: 5, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'V' }, { x: 0, y: 6, dir: 'H' }, { x: 2, y: 8, dir: 'H' }, { x: 1, y: 4, dir: 'H' }, { x: 1, y: 4, dir: 'V' }, { x: 0, y: 5, dir: 'H' }, { x: 2, y: 1, dir: 'H' }, { x: 2, y: 0, dir: 'V' }, { x: 4, y: 8, dir: 'H' }, { x: 4, y: 7, dir: 'V' }, { x: 4, y: 6, dir: 'V' }] },
+  // 50 — 6x9 vertical, 6 couleurs, 6 trous (généré, solution 33 coups)
+  { rows: ['YRBCRBYRRCCY', 'GYCYYRCG..GB', 'RGBCCBRCGRBG', '....GBBPPBBP', 'CBYCCGPYYRRB', 'BP..BGYPRCBR', 'PRPYGPPGGY..', 'RYYCGBBGRBRB', '..CRRBBGGRBR'],
+    solution: [{ x: 4, y: 4, dir: 'V' }, { x: 3, y: 4, dir: 'H' }, { x: 3, y: 3, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 2, y: 3, dir: 'V' }, { x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 5, y: 4, dir: 'V' }, { x: 1, y: 1, dir: 'H' }, { x: 1, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 4, y: 7, dir: 'V' }, { x: 3, y: 8, dir: 'H' }, { x: 2, y: 7, dir: 'H' }, { x: 0, y: 6, dir: 'V' }, { x: 0, y: 5, dir: 'V' }, { x: 0, y: 4, dir: 'V' }, { x: 0, y: 4, dir: 'H' }, { x: 1, y: 8, dir: 'H' }, { x: 1, y: 7, dir: 'V' }, { x: 1, y: 6, dir: 'V' }, { x: 1, y: 6, dir: 'H' }, { x: 2, y: 5, dir: 'V' }, { x: 1, y: 2, dir: 'H' }, { x: 5, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 3, y: 1, dir: 'V' }, { x: 3, y: 2, dir: 'H' }, { x: 5, y: 7, dir: 'V' }, { x: 3, y: 6, dir: 'H' }, { x: 3, y: 5, dir: 'V' }, { x: 4, y: 3, dir: 'H' }] },
 ];
 </script>
 <script id="game-tests">
@@ -410,8 +501,8 @@ function runTests(log) {
     assert(nearestBorder(100, 50, g, geo) === null, 'la frontière vers le trou n\'existe pas');
   });
 
-  T('niveaux : 20 niveaux, format valide, pas de disque pré-résolu', () => {
-    assert(LEVELS.length === 20, '20 niveaux');
+  T('niveaux : 50 niveaux, format valide, pas de disque pré-résolu', () => {
+    assert(LEVELS.length === 50, '50 niveaux');
     const letters = Object.keys(COLORS);
     LEVELS.forEach((lvl, i) => {
       const w = lvl.rows[0].length;
