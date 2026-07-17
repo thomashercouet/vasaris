@@ -26,6 +26,48 @@ function parseLevel(rows) {
     return cells;
   });
 }
+
+function createGame(rows) {
+  return {
+    rows,
+    grid: parseLevel(rows),
+    get width() { return this.grid[0].length; },
+    get height() { return this.grid.length; },
+    cell(x, y) { return (this.grid[y] || [])[x]; },
+    neighbor(border) {
+      return border.dir === 'H' ? { x: border.x + 1, y: border.y } : { x: border.x, y: border.y + 1 };
+    },
+    isValidBorder(border) {
+      const a = this.cell(border.x, border.y);
+      const n = this.neighbor(border);
+      const b = this.cell(n.x, n.y);
+      return !!(a && b && a.active && b.active);
+    },
+    validBorders() {
+      const list = [];
+      for (let y = 0; y < this.height; y++)
+        for (let x = 0; x < this.width; x++)
+          for (const dir of ['H', 'V']) {
+            const b = { x, y, dir };
+            if (this.isValidBorder(b)) list.push(b);
+          }
+      return list;
+    },
+    swap(border) {
+      if (!this.isValidBorder(border)) return null;
+      const n = this.neighbor(border);
+      const a = this.cell(border.x, border.y);
+      const b = this.cell(n.x, n.y);
+      [a.discColor, b.discColor] = [b.discColor, a.discColor];
+      const resolved = [];
+      if (a.discColor === a.caseColor) { a.active = false; resolved.push({ x: border.x, y: border.y }); }
+      if (b.discColor === b.caseColor) { b.active = false; resolved.push({ x: n.x, y: n.y }); }
+      return { resolved };
+    },
+    isWon() { return this.grid.every(row => row.every(c => !c.active)); },
+    reset() { this.grid = parseLevel(this.rows); },
+  };
+}
 </script>
 <script id="game-tests">
 'use strict';
@@ -44,6 +86,69 @@ function runTests(log) {
     assert(grid[0][1].active === false && grid[0][1].caseColor === null && grid[0][1].discColor === null, 'trou en (1,0)');
     assert(grid[1][0].caseColor === 'P' && grid[1][0].discColor === 'R', 'cellule (0,1)');
     assert(grid[1][1].caseColor === 'G' && grid[1][1].discColor === 'B', 'cellule (1,1)');
+  });
+
+  T('swap : échange sans résolution', () => {
+    const g = createGame(['BPGR']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res !== null && res.resolved.length === 0, 'aucune résolution');
+    assert(g.cell(0, 0).discColor === 'R' && g.cell(1, 0).discColor === 'P', 'disques échangés');
+  });
+
+  T('swap : résolution simple', () => {
+    const g = createGame(['BPGB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res.resolved.length === 1 && res.resolved[0].x === 0 && res.resolved[0].y === 0, '(0,0) résolue');
+    assert(g.cell(0, 0).active === false && g.cell(1, 0).active === true, 'active mis à jour');
+    assert(g.cell(0, 0).caseColor === 'B', 'les couleurs restent pour l\'animation');
+    assert(g.isWon() === false, 'pas encore gagné');
+  });
+
+  T('swap : résolution double et victoire', () => {
+    const g = createGame(['BGGB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res.resolved.length === 2, 'deux cellules résolues');
+    assert(g.isWon() === true, 'plateau vide');
+  });
+
+  T('swap : frontière verticale', () => {
+    const g = createGame(['BG', 'GB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'V' });
+    assert(res.resolved.length === 2, 'colonne résolue');
+  });
+
+  T('swap : frontière adjacente à un trou refusée', () => {
+    const g = createGame(['BG..GB']);
+    assert(g.swap({ x: 0, y: 0, dir: 'H' }) === null, 'frontière vers le trou refusée');
+    assert(g.cell(0, 0).discColor === 'G', 'état inchangé');
+  });
+
+  T('swap : frontière hors limites refusée', () => {
+    const g = createGame(['BGGB']);
+    assert(g.swap({ x: 1, y: 0, dir: 'H' }) === null, 'pas de voisin à droite');
+    assert(g.swap({ x: 0, y: 0, dir: 'V' }) === null, 'pas de voisin en bas');
+  });
+
+  T('swap : frontière vers une cellule déjà résolue refusée', () => {
+    const g = createGame(['BPGBPG']);
+    g.swap({ x: 0, y: 0, dir: 'H' }); // (0,0) reçoit B et se résout
+    assert(g.swap({ x: 0, y: 0, dir: 'H' }) === null, '(0,0) est un trou maintenant');
+  });
+
+  T('validBorders : liste les frontières entre cellules actives', () => {
+    const g = createGame(['BG..GB']);
+    const list = g.validBorders();
+    assert(list.length === 0, 'aucune frontière valide autour du trou central');
+    const g2 = createGame(['BPGR', 'PBRG']);
+    assert(g2.validBorders().length === 4, '2 H + 2 V sur une grille 2x2');
+  });
+
+  T('reset : restaure l\'état initial', () => {
+    const g = createGame(['BGGB']);
+    g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(g.isWon() === true, 'gagné avant reset');
+    g.reset();
+    assert(g.isWon() === false && g.cell(0, 0).discColor === 'G' && g.cell(0, 0).active === true, 'état initial restauré');
   });
 
   return failures;
