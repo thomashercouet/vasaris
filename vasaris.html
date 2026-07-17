@@ -68,6 +68,28 @@ function createGame(rows) {
     reset() { this.grid = parseLevel(this.rows); },
   };
 }
+
+function boardGeometry(cols, rowCount, viewW, viewH) {
+  const margin = Math.min(viewW, viewH) * 0.06;
+  const size = Math.min((viewW - 2 * margin) / cols, (viewH - 2 * margin) / rowCount);
+  return { size, ox: (viewW - size * cols) / 2, oy: (viewH - size * rowCount) / 2 };
+}
+
+function borderMidpoint(border, geo) {
+  return border.dir === 'H'
+    ? { mx: geo.ox + (border.x + 1) * geo.size, my: geo.oy + (border.y + 0.5) * geo.size }
+    : { mx: geo.ox + (border.x + 0.5) * geo.size, my: geo.oy + (border.y + 1) * geo.size };
+}
+
+function nearestBorder(px, py, game, geo) {
+  let best = null, bestD = Infinity;
+  for (const b of game.validBorders()) {
+    const { mx, my } = borderMidpoint(b, geo);
+    const d = Math.hypot(px - mx, py - my);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  return best && bestD <= 0.4 * geo.size ? best : null;
+}
 </script>
 <script id="game-tests">
 'use strict';
@@ -149,6 +171,41 @@ function runTests(log) {
     assert(g.isWon() === true, 'gagné avant reset');
     g.reset();
     assert(g.isWon() === false && g.cell(0, 0).discColor === 'G' && g.cell(0, 0).active === true, 'état initial restauré');
+  });
+
+  T('boardGeometry : plateau centré et contenu dans la vue', () => {
+    const g = boardGeometry(4, 3, 800, 600);
+    assert(g.size > 0, 'taille positive');
+    assert(Math.abs(g.ox - (800 - g.size * 4) / 2) < 1e-6, 'centré en x');
+    assert(Math.abs(g.oy - (600 - g.size * 3) / 2) < 1e-6, 'centré en y');
+    assert(g.size * 4 <= 800 && g.size * 3 <= 600, 'contenu dans la vue');
+  });
+
+  T('borderMidpoint : milieux H et V', () => {
+    const geo = { size: 100, ox: 0, oy: 0 };
+    const h = borderMidpoint({ x: 0, y: 0, dir: 'H' }, geo);
+    assert(h.mx === 100 && h.my === 50, 'frontière H entre (0,0) et (1,0)');
+    const v = borderMidpoint({ x: 1, y: 0, dir: 'V' }, geo);
+    assert(v.mx === 150 && v.my === 100, 'frontière V entre (1,0) et (1,1)');
+  });
+
+  T('nearestBorder : frontière la plus proche dans la tolérance', () => {
+    const g = createGame(['BPGR', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    const b = nearestBorder(98, 47, g, geo);
+    assert(b !== null && b.x === 0 && b.y === 0 && b.dir === 'H', 'frontière H (0,0)');
+  });
+
+  T('nearestBorder : null au-delà de la tolérance', () => {
+    const g = createGame(['BPGR', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    assert(nearestBorder(500, 500, g, geo) === null, 'trop loin');
+  });
+
+  T('nearestBorder : les frontières vers un trou sont exclues', () => {
+    const g = createGame(['BP..', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    assert(nearestBorder(100, 50, g, geo) === null, 'la frontière vers le trou n\'existe pas');
   });
 
   return failures;
