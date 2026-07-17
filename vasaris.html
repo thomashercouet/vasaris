@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>VASARIS — prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+    font-family: "Consolas", "Courier New", monospace; color: #ccc;
+    -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+</style>
+</head>
+<body>
+<script id="game-core">
+'use strict';
+const COLORS = { B: '#3B6FF2', G: '#2ECC40', P: '#F26FD8', R: '#E33333', Y: '#F2C230', C: '#2EC4CC' };
+
+function parseLevel(rows) {
+  return rows.map(row => {
+    const cells = [];
+    for (let i = 0; i < row.length; i += 2) {
+      const pair = row.slice(i, i + 2);
+      if (pair === '..') cells.push({ caseColor: null, discColor: null, active: false });
+      else cells.push({ caseColor: pair[0], discColor: pair[1], active: true });
+    }
+    return cells;
+  });
+}
+</script>
+<script id="game-tests">
+'use strict';
+function runTests(log) {
+  let failures = 0;
+  const T = (name, fn) => {
+    try { fn(); log('PASS  ' + name); }
+    catch (e) { failures++; log('FAIL  ' + name + ' — ' + e.message); }
+  };
+  const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+
+  T('parseLevel : dimensions, couleurs, trous', () => {
+    const grid = parseLevel(['BG..', 'PRGB']);
+    assert(grid.length === 2 && grid[0].length === 2, 'grille 2x2');
+    assert(grid[0][0].caseColor === 'B' && grid[0][0].discColor === 'G' && grid[0][0].active === true, 'cellule (0,0)');
+    assert(grid[0][1].active === false && grid[0][1].caseColor === null && grid[0][1].discColor === null, 'trou en (1,0)');
+    assert(grid[1][0].caseColor === 'P' && grid[1][0].discColor === 'R', 'cellule (0,1)');
+    assert(grid[1][1].caseColor === 'G' && grid[1][1].discColor === 'B', 'cellule (1,1)');
+  });
+
+  return failures;
+}
+</script>
+<script id="main">
+'use strict';
+// Rendu, entrées et HUD : tâches 5 à 8.
+</script>
+</body>
+</html>
