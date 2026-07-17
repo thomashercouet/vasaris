@@ -90,6 +90,54 @@ function nearestBorder(px, py, game, geo) {
   }
   return best && bestD <= 0.4 * geo.size ? best : null;
 }
+
+const LEVELS = [
+  // 1 — 2x2, 2 couleurs : deux paires, apprendre l'échange.
+  { rows: ['BGGB', 'GBBG'],
+    solution: [{ x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'H' }] },
+  // 2 — 3x2, 2 couleurs : échanges verticaux.
+  { rows: ['BGGBBG', 'GBBGGB'],
+    solution: [{ x: 0, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'V' }] },
+  // 3 — 3x1, 3 couleurs : première chaîne, l'ordre compte (l'autre ordre bloque).
+  { rows: ['BGGPPB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }] },
+  // 4 — 3x3, 3 couleurs : chaîne en ligne 0 + paires verticales.
+  { rows: ['BGGPPB', 'GPBGPB', 'PGGBBP'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'V' },
+               { x: 1, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'V' }] },
+  // 5 — 3x3, 3 couleurs : chaîne de 4 en L + chaîne verticale + paire.
+  { rows: ['BGGBBG', 'GPBGGP', 'PBGBPG'],
+    solution: [{ x: 1, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 0, dir: 'V' },
+               { x: 1, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'V' }] },
+  // 6 — 4x3, 3 couleurs : paire, chaînes de 3, coins.
+  { rows: ['BGGPPBBG', 'GPBGPBGB', 'PGGBBGGP'],
+    solution: [{ x: 3, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' },
+               { x: 0, y: 1, dir: 'V' }, { x: 1, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'H' },
+               { x: 2, y: 1, dir: 'V' }] },
+  // 7 — 4x3, 3 couleurs : chaînes cachées en serpentin.
+  { rows: ['BGGPPBBG', 'GPBGBGGP', 'PBPBGPPB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 2, dir: 'H' },
+               { x: 2, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'H' },
+               { x: 3, y: 1, dir: 'V' }, { x: 3, y: 0, dir: 'V' }] },
+  // 8 — 4x4, 4 couleurs, 2 trous initiaux : chaînes de 4 et 5 contournant les murs.
+  { rows: ['BGGPPRRB', 'GR..PBBG', 'RBBP..GR', 'RGPRBPRB'],
+    solution: [{ x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' },
+               { x: 0, y: 3, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 2, dir: 'H' },
+               { x: 0, y: 1, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 3, y: 2, dir: 'V' },
+               { x: 3, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }] },
+  // 9 — 5x4, 4 couleurs, 2 trous formant un mur central.
+  { rows: ['BGGRRBBRRG', 'PGGP..GPGP', 'RBGB..PBPR', 'BRBPPGBGRB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'H' },
+               { x: 0, y: 2, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 1, y: 2, dir: 'V' },
+               { x: 4, y: 2, dir: 'V' }, { x: 4, y: 1, dir: 'V' }, { x: 4, y: 0, dir: 'V' },
+               { x: 3, y: 0, dir: 'H' }, { x: 3, y: 2, dir: 'V' }, { x: 3, y: 1, dir: 'V' }] },
+  // 10 — 5x4, 4 couleurs : chaîne de 7 + chaîne de 5 + paires, trous en quinconce.
+  { rows: ['BGGPPRRBBG', 'GR..BPPBGP', 'RPGRRG..PB', 'PBBRRGPGGP'],
+    solution: [{ x: 4, y: 1, dir: 'V' }, { x: 4, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 3, dir: 'H' },
+               { x: 0, y: 3, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' },
+               { x: 2, y: 1, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 3, y: 3, dir: 'H' }] },
+];
 </script>
 <script id="game-tests">
 'use strict';
@@ -206,6 +254,29 @@ function runTests(log) {
     const g = createGame(['BP..', 'PBRG']);
     const geo = { size: 100, ox: 0, oy: 0 };
     assert(nearestBorder(100, 50, g, geo) === null, 'la frontière vers le trou n\'existe pas');
+  });
+
+  T('niveaux : 10 niveaux, format valide, pas de disque pré-résolu', () => {
+    assert(LEVELS.length === 10, '10 niveaux');
+    const letters = Object.keys(COLORS);
+    LEVELS.forEach((lvl, i) => {
+      const w = lvl.rows[0].length;
+      lvl.rows.forEach(r => assert(r.length === w && r.length % 2 === 0, `niveau ${i + 1} : lignes régulières`));
+      parseLevel(lvl.rows).forEach(row => row.forEach(c => {
+        if (!c.active) return;
+        assert(letters.includes(c.caseColor) && letters.includes(c.discColor), `niveau ${i + 1} : couleurs connues`);
+        assert(c.caseColor !== c.discColor, `niveau ${i + 1} : pas de disque pré-résolu`);
+      }));
+    });
+  });
+
+  T('niveaux : chaque solution de référence vide le plateau', () => {
+    LEVELS.forEach((lvl, i) => {
+      const g = createGame(lvl.rows);
+      lvl.solution.forEach((b, j) =>
+        assert(g.swap(b) !== null, `niveau ${i + 1} : coup ${j + 1} (${b.x},${b.y},${b.dir}) invalide`));
+      assert(g.isWon(), `niveau ${i + 1} : plateau non vide après la solution`);
+    });
   });
 
   return failures;
