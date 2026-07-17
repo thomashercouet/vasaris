@@ -598,7 +598,7 @@ function updateHud() {
   levelLabel.textContent = `NIVEAU ${current + 1}/${LEVELS.length}`;
   const par = LEVELS[current].solution.length;
   const best = save.best[current];
-  counterEl.textContent = `COUPS ${moves} · SOLUBLE EN ${par}` + (best ? ` · RECORD ${best}` : '');
+  counterEl.textContent = `COUPS ${moves} · SOLVABLE EN ${par}` + (best ? ` · RECORD ${best}` : '');
 }
 
 function showHome() {
