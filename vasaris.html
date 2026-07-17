@@ -8,9 +8,36 @@
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
     font-family: "Consolas", "Courier New", monospace; color: #ccc;
     -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 0; left: 0; right: 0; display: flex;
+    justify-content: center; align-items: center; gap: 18px; padding: 12px;
+    font-size: 16px; letter-spacing: 2px; }
+  #hud button { background: none; border: 1px solid #444; color: #ccc;
+    font: inherit; padding: 4px 14px; cursor: pointer; }
+  #hud button:disabled { opacity: 0.3; cursor: default; }
+  #overlay { position: fixed; inset: 0; display: none; flex-direction: column;
+    justify-content: center; align-items: center; gap: 24px;
+    background: rgba(0,0,0,0.85); font-size: 22px; letter-spacing: 4px; }
+  #overlay button { background: none; border: 1px solid #444; color: #ccc;
+    font: inherit; padding: 8px 24px; cursor: pointer; }
+  #banner { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px;
+    font-size: 13px; white-space: pre; display: none; background: #111;
+    max-height: 40%; overflow: auto; }
 </style>
 </head>
 <body>
+<canvas id="board"></canvas>
+<div id="hud">
+  <button id="prev">◀</button>
+  <span id="level-label">NIVEAU 1/10</span>
+  <button id="restart">⟲</button>
+  <button id="next">▶</button>
+</div>
+<div id="overlay">
+  <div>FIN DU PROTOTYPE</div>
+  <button id="replay">REJOUER</button>
+</div>
+<div id="banner"></div>
 <script id="game-core">
 'use strict';
 const COLORS = { B: '#3B6FF2', G: '#2ECC40', P: '#F26FD8', R: '#E33333', Y: '#F2C230', C: '#2EC4CC' };
@@ -284,7 +311,128 @@ function runTests(log) {
 </script>
 <script id="main">
 'use strict';
-// Rendu, entrées et HUD : tâches 5 à 8.
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const levelLabel = document.getElementById('level-label');
+const overlay = document.getElementById('overlay');
+
+const SWAP_MS = 120, RESOLVE_MS = 150;
+
+let game = null;
+let current = 0;
+let maxReached = 0;
+let hover = null;   // frontière survolée ou null
+let anim = null;    // {phase:'swap'|'resolve', start, moves, resolved} — tâche 7
+
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * f);
+  const g = Math.round(((n >> 8) & 255) * f);
+  const b = Math.round((n & 255) * f);
+  return `rgb(${r},${g},${b})`;
+}
+
+function loadLevel(i) {
+  current = i;
+  maxReached = Math.max(maxReached, i);
+  game = createGame(LEVELS[i].rows);
+  hover = null;
+  anim = null;
+  updateHud();
+}
+
+function geo() {
+  return boardGeometry(game.width, game.height, canvas.width, canvas.height);
+}
+
+function cellCenter(p, g) {
+  return { x: g.ox + (p.x + 0.5) * g.size, y: g.oy + (p.y + 0.5) * g.size };
+}
+
+function cellRect(x, y, g) {
+  const gap = g.size * 0.06;
+  return { x: g.ox + x * g.size + gap / 2, y: g.oy + y * g.size + gap / 2, w: g.size - gap, h: g.size - gap };
+}
+
+function drawDisc(cx, cy, size, color) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.30, 0, Math.PI * 2);
+  ctx.fillStyle = COLORS[color];
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, size * 0.03);
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+}
+
+function render(now) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const g = geo();
+  for (let y = 0; y < game.height; y++) {
+    for (let x = 0; x < game.width; x++) {
+      const r = cellRect(x, y, g);
+      ctx.fillStyle = '#101010'; // emplacement : les trous restent visibles
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      const c = game.cell(x, y);
+      if (!c.active) continue;
+      ctx.fillStyle = shade(COLORS[c.caseColor], 0.45); // case = teinte assombrie
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      drawDisc(r.x + r.w / 2, r.y + r.h / 2, g.size, c.discColor); // disque = teinte vive
+    }
+  }
+  if (hover && !anim) {
+    const { mx, my } = borderMidpoint(hover, g);
+    const inset = g.size * 0.18;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (hover.dir === 'H') { ctx.moveTo(mx, my - g.size / 2 + inset); ctx.lineTo(mx, my + g.size / 2 - inset); }
+    else { ctx.moveTo(mx - g.size / 2 + inset, my); ctx.lineTo(mx + g.size / 2 - inset, my); }
+    ctx.stroke();
+  }
+}
+
+function updateHud() {
+  levelLabel.textContent = `NIVEAU ${current + 1}/${LEVELS.length}`;
+  document.getElementById('prev').disabled = current === 0;
+  document.getElementById('next').disabled = current >= maxReached;
+}
+
+function onWin() {
+  if (current + 1 < LEVELS.length) loadLevel(current + 1);
+  else overlay.style.display = 'flex';
+}
+
+document.getElementById('restart').addEventListener('click', () => loadLevel(current));
+document.getElementById('prev').addEventListener('click', () => { if (current > 0) loadLevel(current - 1); });
+document.getElementById('next').addEventListener('click', () => { if (current < maxReached) loadLevel(current + 1); });
+document.getElementById('replay').addEventListener('click', () => {
+  overlay.style.display = 'none';
+  maxReached = 0;
+  loadLevel(0);
+});
+window.addEventListener('keydown', ev => {
+  if (ev.key === 'r' || ev.key === 'R') loadLevel(current);
+  if (ev.key === 'ArrowLeft' && current > 0) loadLevel(current - 1);
+  if (ev.key === 'ArrowRight' && current < maxReached) loadLevel(current + 1);
+});
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(innerWidth * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+}
+window.addEventListener('resize', resize);
+
+function tick(now) {
+  render(now);
+  requestAnimationFrame(tick);
+}
+
+resize();
+loadLevel(0);
+requestAnimationFrame(tick);
 </script>
 </body>
 </html>
