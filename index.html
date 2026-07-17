@@ -7,7 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>VASARIS — prototype</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>VASARIS</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
     font-family: "Consolas", "Courier New", monospace; color: #ccc;
@@ -447,7 +450,7 @@ let anim = null;    // {phase:'swap'|'resolve', start, moves, resolved}
 
 // ---- Sauvegarde automatique (localStorage) ----
 const SAVE_KEY = 'vasaris-save';
-const save = { maxReached: 0, completed: [], best: {}, sound: true, symbols: false };
+const save = { maxReached: 0, completed: [], best: {}, sound: false, symbols: false };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
@@ -719,6 +722,11 @@ resize();
 loadLevel(Math.min(save.maxReached, LEVELS.length - 1)); // reprend où on en était
 showHome(); // ... mais on arrive sur l'accueil
 requestAnimationFrame(tick);
+
+// Hors-ligne après la première visite (uniquement en ligne, pas en file://)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 
 if (location.search.includes('test')) {
   const banner = document.getElementById('banner');

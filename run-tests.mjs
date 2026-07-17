@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const html = readFileSync(new URL('./vasaris.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 
 function extract(id) {
   const m = html.match(new RegExp(`<script id="${id}">([\\s\\S]*?)</script>`));
