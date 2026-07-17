@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>VASARIS</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+    font-family: "Consolas", "Courier New", monospace; color: #ccc;
+    -webkit-user-select: none; user-select: none; touch-action: manipulation;
+    overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
+    position: fixed; inset: 0; }
+  canvas { display: block; touch-action: none; }
+  #hud { position: fixed; top: env(safe-area-inset-top, 0); left: 0; right: 0; display: flex;
+    justify-content: center; align-items: center; gap: 14px; padding: 10px;
+    font-size: 16px; letter-spacing: 2px; pointer-events: none; }
+  #hud button { background: none; border: 1px solid #444; color: #ccc;
+    font: inherit; padding: 8px 18px; min-width: 48px; min-height: 44px;
+    cursor: pointer; pointer-events: auto; }
+  #hud button:disabled { opacity: 0.3; cursor: default; }
+  #counter { position: fixed; bottom: env(safe-area-inset-bottom, 0); left: 0; right: 0;
+    text-align: center; padding: 10px; font-size: 15px; letter-spacing: 2px;
+    color: #888; pointer-events: none; }
+  #home { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 30px; z-index: 2; }
+  #home h1 { font-size: 44px; letter-spacing: 14px; font-weight: normal; margin: 0;
+    color: #eee; text-indent: 14px; }
+  #levels { display: grid; grid-template-columns: repeat(5, 54px); gap: 10px; }
+  #levels button { width: 54px; height: 54px; background: none; border: 1px solid #444;
+    color: #ccc; font: inherit; font-size: 16px; cursor: pointer; padding: 0; }
+  #levels button.done { border-color: #2ECC40; color: #2ECC40; }
+  #levels button:disabled { opacity: 0.25; cursor: default; }
+  #options { display: flex; gap: 14px; }
+  #options button { background: none; border: 1px solid #444; color: #ccc;
+    font: inherit; font-size: 14px; padding: 10px 16px; cursor: pointer; }
+  #overlay { position: fixed; inset: 0; display: none; flex-direction: column;
+    justify-content: center; align-items: center; gap: 24px; z-index: 3;
+    background: rgba(0,0,0,0.85); font-size: 22px; letter-spacing: 4px; }
+  #overlay button { background: none; border: 1px solid #444; color: #ccc;
+    font: inherit; padding: 8px 24px; cursor: pointer; }
+  #banner { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px; z-index: 4;
+    font-size: 13px; white-space: pre; display: none; background: #111;
+    max-height: 40%; overflow: auto; }
+  @media (pointer: coarse) {
+    #hud { gap: 20px; }
+    #hud button { font-size: 24px; padding: 12px 26px; }
+    #levels { grid-template-columns: repeat(5, 60px); gap: 12px; }
+    #levels button { width: 60px; height: 60px; font-size: 18px; }
+    #options button { font-size: 16px; padding: 12px 18px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="board"></canvas>
+<div id="hud">
+  <button id="home-btn" title="Accueil">⌂</button>
+  <span id="level-label">NIVEAU 1/20</span>
+  <button id="restart" title="Recommencer">⟲</button>
+</div>
+<div id="counter"></div>
+<div id="home">
+  <h1>VASARIS</h1>
+  <div id="levels"></div>
+  <div id="options">
+    <button id="opt-sound">SON : OUI</button>
+    <button id="opt-symbols">SYMBOLES : NON</button>
+  </div>
+</div>
+<div id="overlay">
+  <div>BRAVO — JEU TERMINÉ</div>
+  <button id="replay">ACCUEIL</button>
+</div>
+<div id="banner"></div>
+<script id="game-core">
+'use strict';
+const COLORS = { B: '#3B6FF2', G: '#2ECC40', P: '#F26FD8', R: '#E33333', Y: '#F2C230', C: '#2EC4CC' };
+
+function parseLevel(rows) {
+  return rows.map(row => {
+    const cells = [];
+    for (let i = 0; i < row.length; i += 2) {
+      const pair = row.slice(i, i + 2);
+      if (pair === '..') cells.push({ caseColor: null, discColor: null, active: false });
+      else cells.push({ caseColor: pair[0], discColor: pair[1], active: true });
+    }
+    return cells;
+  });
+}
+
+function createGame(rows) {
+  return {
+    rows,
+    grid: parseLevel(rows),
+    get width() { return this.grid[0].length; },
+    get height() { return this.grid.length; },
+    cell(x, y) { return (this.grid[y] || [])[x]; },
+    neighbor(border) {
+      return border.dir === 'H' ? { x: border.x + 1, y: border.y } : { x: border.x, y: border.y + 1 };
+    },
+    isValidBorder(border) {
+      const a = this.cell(border.x, border.y);
+      const n = this.neighbor(border);
+      const b = this.cell(n.x, n.y);
+      return !!(a && b && a.active && b.active);
+    },
+    validBorders() {
+      const list = [];
+      for (let y = 0; y < this.height; y++)
+        for (let x = 0; x < this.width; x++)
+          for (const dir of ['H', 'V']) {
+            const b = { x, y, dir };
+            if (this.isValidBorder(b)) list.push(b);
+          }
+      return list;
+    },
+    swap(border) {
+      if (!this.isValidBorder(border)) return null;
+      const n = this.neighbor(border);
+      const a = this.cell(border.x, border.y);
+      const b = this.cell(n.x, n.y);
+      [a.discColor, b.discColor] = [b.discColor, a.discColor];
+      const resolved = [];
+      if (a.discColor === a.caseColor) { a.active = false; resolved.push({ x: border.x, y: border.y }); }
+      if (b.discColor === b.caseColor) { b.active = false; resolved.push({ x: n.x, y: n.y }); }
+      return { resolved };
+    },
+    isWon() { return this.grid.every(row => row.every(c => !c.active)); },
+    reset() { this.grid = parseLevel(this.rows); },
+  };
+}
+
+function boardGeometry(cols, rowCount, viewW, viewH) {
+  const margin = Math.min(viewW, viewH) * 0.06;
+  const size = Math.min((viewW - 2 * margin) / cols, (viewH - 2 * margin) / rowCount);
+  return { size, ox: (viewW - size * cols) / 2, oy: (viewH - size * rowCount) / 2 };
+}
+
+function borderMidpoint(border, geo) {
+  return border.dir === 'H'
+    ? { mx: geo.ox + (border.x + 1) * geo.size, my: geo.oy + (border.y + 0.5) * geo.size }
+    : { mx: geo.ox + (border.x + 0.5) * geo.size, my: geo.oy + (border.y + 1) * geo.size };
+}
+
+function nearestBorder(px, py, game, geo) {
+  let best = null, bestD = Infinity;
+  for (const b of game.validBorders()) {
+    const { mx, my } = borderMidpoint(b, geo);
+    const d = Math.hypot(px - mx, py - my);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  return best && bestD <= 0.4 * geo.size ? best : null;
+}
+
+const LEVELS = [
+  // 1 — 2x2, 2 couleurs : deux paires, apprendre l'échange.
+  { rows: ['BGGB', 'GBBG'],
+    solution: [{ x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'H' }] },
+  // 2 — 3x2, 2 couleurs : échanges verticaux.
+  { rows: ['BGGBBG', 'GBBGGB'],
+    solution: [{ x: 0, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'V' }] },
+  // 3 — 3x1, 3 couleurs : première chaîne, l'ordre compte (l'autre ordre bloque).
+  { rows: ['BGGPPB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }] },
+  // 4 — 3x3, 3 couleurs : chaîne en ligne 0 + paires verticales.
+  { rows: ['BGGPPB', 'GPBGPB', 'PGGBBP'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'V' },
+               { x: 1, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'V' }] },
+  // 5 — 3x3, 3 couleurs : chaîne de 4 en L + chaîne verticale + paire.
+  { rows: ['BGGBBG', 'GPBGGP', 'PBGBPG'],
+    solution: [{ x: 1, y: 2, dir: 'H' }, { x: 2, y: 1, dir: 'V' }, { x: 2, y: 0, dir: 'V' },
+               { x: 1, y: 0, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 0, dir: 'V' }] },
+  // 6 — 4x3, 3 couleurs : paire, chaînes de 3, coins.
+  { rows: ['BGGPPBBG', 'GPBGPBGB', 'PGGBBGGP'],
+    solution: [{ x: 3, y: 0, dir: 'V' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' },
+               { x: 0, y: 1, dir: 'V' }, { x: 1, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'H' },
+               { x: 2, y: 1, dir: 'V' }] },
+  // 7 — 4x3, 3 couleurs : chaînes cachées en serpentin.
+  { rows: ['BGGPPBBG', 'GPBGBGGP', 'PBPBGPPB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 2, dir: 'H' },
+               { x: 2, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'H' },
+               { x: 3, y: 1, dir: 'V' }, { x: 3, y: 0, dir: 'V' }] },
+  // 8 — 4x4, 4 couleurs, 2 trous initiaux : chaînes de 4 et 5 contournant les murs.
+  { rows: ['BGGPPRRB', 'GR..PBBG', 'RBBP..GR', 'RGPRBPRB'],
+    solution: [{ x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' },
+               { x: 0, y: 3, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 2, dir: 'H' },
+               { x: 0, y: 1, dir: 'V' }, { x: 2, y: 3, dir: 'H' }, { x: 3, y: 2, dir: 'V' },
+               { x: 3, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }] },
+  // 9 — 5x4, 4 couleurs, 2 trous formant un mur central.
+  { rows: ['BGGRRBBRRG', 'PGGP..GPGP', 'RBGB..PBPR', 'BRBPPGBGRB'],
+    solution: [{ x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 1, dir: 'H' },
+               { x: 0, y: 2, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 1, y: 2, dir: 'V' },
+               { x: 4, y: 2, dir: 'V' }, { x: 4, y: 1, dir: 'V' }, { x: 4, y: 0, dir: 'V' },
+               { x: 3, y: 0, dir: 'H' }, { x: 3, y: 2, dir: 'V' }, { x: 3, y: 1, dir: 'V' }] },
+  // 10 — 5x4, 4 couleurs : chaîne de 7 + chaîne de 5 + paires, trous en quinconce.
+  { rows: ['BGGPPRRBBG', 'GR..BPPBGP', 'RPGRRG..PB', 'PBBRRGPGGP'],
+    solution: [{ x: 4, y: 1, dir: 'V' }, { x: 4, y: 0, dir: 'V' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 3, dir: 'H' },
+               { x: 0, y: 3, dir: 'H' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' },
+               { x: 2, y: 1, dir: 'H' }, { x: 1, y: 2, dir: 'H' }, { x: 3, y: 3, dir: 'H' }] },
+  // 11 — 5x4, 5 couleurs (arrivée du jaune) : chaînes de 5, 4, 3 et paires.
+  { rows: ['BGGPPRRYYB', 'GYYPPYBYRB', 'YRGRRGYBBG', 'RPPGBPPBGR'],
+    solution: [{ x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' },
+               { x: 0, y: 0, dir: 'H' }, { x: 0, y: 3, dir: 'H' }, { x: 0, y: 2, dir: 'V' },
+               { x: 0, y: 1, dir: 'V' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 1, dir: 'V' },
+               { x: 1, y: 1, dir: 'H' }, { x: 3, y: 1, dir: 'V' }, { x: 1, y: 2, dir: 'H' },
+               { x: 2, y: 3, dir: 'H' }] },
+  // 12 — 5x4, 5 couleurs, mur central de 2 trous.
+  { rows: ['GRBGYBBPPY', 'RYPG..GBYG', 'BYGP..RYYB', 'YBPRRGGPBR'],
+    solution: [{ x: 0, y: 0, dir: 'V' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' },
+               { x: 1, y: 1, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 2, y: 3, dir: 'H' },
+               { x: 1, y: 3, dir: 'H' }, { x: 3, y: 1, dir: 'H' }, { x: 4, y: 0, dir: 'V' },
+               { x: 3, y: 0, dir: 'H' }, { x: 4, y: 2, dir: 'V' }, { x: 3, y: 2, dir: 'H' }] },
+  // 13 — 5x5, 5 couleurs : deux chaînes de 5, anneau de 4, chaînes de 3.
+  { rows: ['BGGPPRRYYB', 'YPBRRBPBGR', 'PGYGGYBYRB', 'GBRYYGYPBY', 'BYBRGBPGYP'],
+    solution: [{ x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' },
+               { x: 0, y: 0, dir: 'H' }, { x: 3, y: 4, dir: 'H' }, { x: 4, y: 3, dir: 'V' },
+               { x: 4, y: 2, dir: 'V' }, { x: 4, y: 1, dir: 'V' }, { x: 0, y: 3, dir: 'V' },
+               { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 1, y: 4, dir: 'H' },
+               { x: 2, y: 3, dir: 'V' }, { x: 1, y: 3, dir: 'H' }, { x: 3, y: 2, dir: 'V' },
+               { x: 3, y: 1, dir: 'V' }, { x: 1, y: 1, dir: 'H' }, { x: 1, y: 2, dir: 'H' }] },
+  // 14 — 6x4, 5 couleurs, 2 trous isolés.
+  { rows: ['BGGPPRRYYBGP', 'YR..YRYRRYPB', 'RPRBBYGP..BR', 'PGGYBGPBYGRY'],
+    solution: [{ x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' }, { x: 1, y: 0, dir: 'H' },
+               { x: 0, y: 0, dir: 'H' }, { x: 4, y: 3, dir: 'H' }, { x: 5, y: 2, dir: 'V' },
+               { x: 5, y: 1, dir: 'V' }, { x: 5, y: 0, dir: 'V' }, { x: 0, y: 3, dir: 'H' },
+               { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'V' },
+               { x: 1, y: 2, dir: 'H' }, { x: 2, y: 3, dir: 'H' }, { x: 3, y: 2, dir: 'V' },
+               { x: 3, y: 1, dir: 'H' }] },
+  // 15 — 6x4, 6 couleurs (arrivée du cyan) : chaîne de 6 pleine largeur.
+  { rows: ['BGGPPRRYYCCB', 'CGRCPBBCCPBY', 'GYYGGCCYCBYC', 'YRPGYPCYRCGR'],
+    solution: [{ x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 1, y: 3, dir: 'H' },
+               { x: 2, y: 3, dir: 'H' }, { x: 3, y: 3, dir: 'H' }, { x: 4, y: 3, dir: 'H' },
+               { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'H' },
+               { x: 4, y: 2, dir: 'H' }, { x: 5, y: 1, dir: 'V' }, { x: 3, y: 1, dir: 'H' },
+               { x: 2, y: 1, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'H' }] },
+  // 16 — 6x4, 6 couleurs, mur de 3 trous en L.
+  { rows: ['BGGPPRRYYCCB', 'YBBG....RCCG', 'CYGC..YPBYGR', 'PCCRRGGYYCCB'],
+    solution: [{ x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 2, dir: 'H' },
+               { x: 1, y: 1, dir: 'V' }, { x: 0, y: 1, dir: 'H' }, { x: 5, y: 1, dir: 'V' },
+               { x: 4, y: 1, dir: 'H' }, { x: 3, y: 2, dir: 'V' }, { x: 2, y: 3, dir: 'H' },
+               { x: 1, y: 3, dir: 'H' }, { x: 0, y: 3, dir: 'H' }, { x: 4, y: 3, dir: 'H' },
+               { x: 4, y: 2, dir: 'V' }] },
+  // 17 — 5x5, 6 couleurs, 2 trous : chaînes en équerre.
+  { rows: ['BGGPPRRYYC', 'YC..RPPCCB', 'CGBGGYCRGB', 'GRGBYC..BY', 'RPPYCGCGYC'],
+    solution: [{ x: 4, y: 0, dir: 'V' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 0, y: 4, dir: 'H' },
+               { x: 0, y: 3, dir: 'V' }, { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' },
+               { x: 3, y: 4, dir: 'H' }, { x: 4, y: 3, dir: 'V' }, { x: 4, y: 2, dir: 'V' },
+               { x: 3, y: 1, dir: 'V' }, { x: 2, y: 1, dir: 'H' }, { x: 1, y: 2, dir: 'V' },
+               { x: 2, y: 3, dir: 'V' }, { x: 2, y: 2, dir: 'V' }] },
+  // 18 — 6x5, 6 couleurs, 3 trous : deux chaînes de 6 et deux de 5.
+  { rows: ['BGGPPRRYYCCB', 'YC..BRRC..CG', 'CRPYPGCBRCGY', 'RGGPGP..BRYB', 'GRRBBCCPPYYG'],
+    solution: [{ x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 4, y: 4, dir: 'H' },
+               { x: 3, y: 4, dir: 'H' }, { x: 2, y: 4, dir: 'H' }, { x: 1, y: 4, dir: 'H' },
+               { x: 0, y: 4, dir: 'H' }, { x: 1, y: 2, dir: 'V' }, { x: 0, y: 3, dir: 'H' },
+               { x: 0, y: 2, dir: 'V' }, { x: 0, y: 1, dir: 'V' }, { x: 3, y: 1, dir: 'V' },
+               { x: 2, y: 1, dir: 'H' }, { x: 4, y: 2, dir: 'V' }, { x: 4, y: 3, dir: 'H' },
+               { x: 5, y: 2, dir: 'V' }, { x: 5, y: 1, dir: 'V' }, { x: 2, y: 2, dir: 'V' }] },
+  // 19 — 6x5, 6 couleurs, 4 trous en blocs symétriques.
+  { rows: ['BGGPPRRYYCCB', 'YBBR....CBPC', 'CYRCCGGCBYYP', 'GYYG....BRRB', 'GRRBBCCPPYYG'],
+    solution: [{ x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 4, y: 4, dir: 'H' },
+               { x: 3, y: 4, dir: 'H' }, { x: 2, y: 4, dir: 'H' }, { x: 1, y: 4, dir: 'H' },
+               { x: 0, y: 4, dir: 'H' }, { x: 0, y: 2, dir: 'H' }, { x: 1, y: 1, dir: 'V' },
+               { x: 0, y: 1, dir: 'H' }, { x: 4, y: 2, dir: 'H' }, { x: 4, y: 1, dir: 'V' },
+               { x: 4, y: 1, dir: 'H' }, { x: 0, y: 3, dir: 'H' }, { x: 4, y: 3, dir: 'H' },
+               { x: 2, y: 2, dir: 'H' }] },
+  // 20 — 6x5, 6 couleurs : le final, quatre chaînes pleine largeur.
+  { rows: ['BGGPPRRYYCCB', 'YBBY....GCCG', 'RYYBBGGCCPPR', 'YBBCCRRGGPPY', 'GRRBBCCPPYYG'],
+    solution: [{ x: 4, y: 0, dir: 'H' }, { x: 3, y: 0, dir: 'H' }, { x: 2, y: 0, dir: 'H' },
+               { x: 1, y: 0, dir: 'H' }, { x: 0, y: 0, dir: 'H' }, { x: 4, y: 2, dir: 'H' },
+               { x: 3, y: 2, dir: 'H' }, { x: 2, y: 2, dir: 'H' }, { x: 1, y: 2, dir: 'H' },
+               { x: 0, y: 2, dir: 'H' }, { x: 4, y: 3, dir: 'H' }, { x: 3, y: 3, dir: 'H' },
+               { x: 2, y: 3, dir: 'H' }, { x: 1, y: 3, dir: 'H' }, { x: 0, y: 3, dir: 'H' },
+               { x: 4, y: 4, dir: 'H' }, { x: 3, y: 4, dir: 'H' }, { x: 2, y: 4, dir: 'H' },
+               { x: 1, y: 4, dir: 'H' }, { x: 0, y: 4, dir: 'H' }, { x: 0, y: 1, dir: 'H' },
+               { x: 4, y: 1, dir: 'H' }] },
+];
+</script>
+<script id="game-tests">
+'use strict';
+function runTests(log) {
+  let failures = 0;
+  const T = (name, fn) => {
+    try { fn(); log('PASS  ' + name); }
+    catch (e) { failures++; log('FAIL  ' + name + ' — ' + e.message); }
+  };
+  const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+
+  T('parseLevel : dimensions, couleurs, trous', () => {
+    const grid = parseLevel(['BG..', 'PRGB']);
+    assert(grid.length === 2 && grid[0].length === 2, 'grille 2x2');
+    assert(grid[0][0].caseColor === 'B' && grid[0][0].discColor === 'G' && grid[0][0].active === true, 'cellule (0,0)');
+    assert(grid[0][1].active === false && grid[0][1].caseColor === null && grid[0][1].discColor === null, 'trou en (1,0)');
+    assert(grid[1][0].caseColor === 'P' && grid[1][0].discColor === 'R', 'cellule (0,1)');
+    assert(grid[1][1].caseColor === 'G' && grid[1][1].discColor === 'B', 'cellule (1,1)');
+  });
+
+  T('swap : échange sans résolution', () => {
+    const g = createGame(['BPGR']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res !== null && res.resolved.length === 0, 'aucune résolution');
+    assert(g.cell(0, 0).discColor === 'R' && g.cell(1, 0).discColor === 'P', 'disques échangés');
+  });
+
+  T('swap : résolution simple', () => {
+    const g = createGame(['BPGB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res.resolved.length === 1 && res.resolved[0].x === 0 && res.resolved[0].y === 0, '(0,0) résolue');
+    assert(g.cell(0, 0).active === false && g.cell(1, 0).active === true, 'active mis à jour');
+    assert(g.cell(0, 0).caseColor === 'B', 'les couleurs restent pour l\'animation');
+    assert(g.isWon() === false, 'pas encore gagné');
+  });
+
+  T('swap : résolution double et victoire', () => {
+    const g = createGame(['BGGB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(res.resolved.length === 2, 'deux cellules résolues');
+    assert(g.isWon() === true, 'plateau vide');
+  });
+
+  T('swap : frontière verticale', () => {
+    const g = createGame(['BG', 'GB']);
+    const res = g.swap({ x: 0, y: 0, dir: 'V' });
+    assert(res.resolved.length === 2, 'colonne résolue');
+  });
+
+  T('swap : frontière adjacente à un trou refusée', () => {
+    const g = createGame(['BG..GB']);
+    assert(g.swap({ x: 0, y: 0, dir: 'H' }) === null, 'frontière vers le trou refusée');
+    assert(g.cell(0, 0).discColor === 'G', 'état inchangé');
+  });
+
+  T('swap : frontière hors limites refusée', () => {
+    const g = createGame(['BGGB']);
+    assert(g.swap({ x: 1, y: 0, dir: 'H' }) === null, 'pas de voisin à droite');
+    assert(g.swap({ x: 0, y: 0, dir: 'V' }) === null, 'pas de voisin en bas');
+  });
+
+  T('swap : frontière vers une cellule déjà résolue refusée', () => {
+    const g = createGame(['BPGBPG']);
+    g.swap({ x: 0, y: 0, dir: 'H' }); // (0,0) reçoit B et se résout
+    assert(g.swap({ x: 0, y: 0, dir: 'H' }) === null, '(0,0) est un trou maintenant');
+  });
+
+  T('validBorders : liste les frontières entre cellules actives', () => {
+    const g = createGame(['BG..GB']);
+    const list = g.validBorders();
+    assert(list.length === 0, 'aucune frontière valide autour du trou central');
+    const g2 = createGame(['BPGR', 'PBRG']);
+    assert(g2.validBorders().length === 4, '2 H + 2 V sur une grille 2x2');
+  });
+
+  T('reset : restaure l\'état initial', () => {
+    const g = createGame(['BGGB']);
+    g.swap({ x: 0, y: 0, dir: 'H' });
+    assert(g.isWon() === true, 'gagné avant reset');
+    g.reset();
+    assert(g.isWon() === false && g.cell(0, 0).discColor === 'G' && g.cell(0, 0).active === true, 'état initial restauré');
+  });
+
+  T('boardGeometry : plateau centré et contenu dans la vue', () => {
+    const g = boardGeometry(4, 3, 800, 600);
+    assert(g.size > 0, 'taille positive');
+    assert(Math.abs(g.ox - (800 - g.size * 4) / 2) < 1e-6, 'centré en x');
+    assert(Math.abs(g.oy - (600 - g.size * 3) / 2) < 1e-6, 'centré en y');
+    assert(g.size * 4 <= 800 && g.size * 3 <= 600, 'contenu dans la vue');
+  });
+
+  T('borderMidpoint : milieux H et V', () => {
+    const geo = { size: 100, ox: 0, oy: 0 };
+    const h = borderMidpoint({ x: 0, y: 0, dir: 'H' }, geo);
+    assert(h.mx === 100 && h.my === 50, 'frontière H entre (0,0) et (1,0)');
+    const v = borderMidpoint({ x: 1, y: 0, dir: 'V' }, geo);
+    assert(v.mx === 150 && v.my === 100, 'frontière V entre (1,0) et (1,1)');
+  });
+
+  T('nearestBorder : frontière la plus proche dans la tolérance', () => {
+    const g = createGame(['BPGR', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    const b = nearestBorder(98, 47, g, geo);
+    assert(b !== null && b.x === 0 && b.y === 0 && b.dir === 'H', 'frontière H (0,0)');
+  });
+
+  T('nearestBorder : null au-delà de la tolérance', () => {
+    const g = createGame(['BPGR', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    assert(nearestBorder(500, 500, g, geo) === null, 'trop loin');
+  });
+
+  T('nearestBorder : les frontières vers un trou sont exclues', () => {
+    const g = createGame(['BP..', 'PBRG']);
+    const geo = { size: 100, ox: 0, oy: 0 };
+    assert(nearestBorder(100, 50, g, geo) === null, 'la frontière vers le trou n\'existe pas');
+  });
+
+  T('niveaux : 20 niveaux, format valide, pas de disque pré-résolu', () => {
+    assert(LEVELS.length === 20, '20 niveaux');
+    const letters = Object.keys(COLORS);
+    LEVELS.forEach((lvl, i) => {
+      const w = lvl.rows[0].length;
+      lvl.rows.forEach(r => assert(r.length === w && r.length % 2 === 0, `niveau ${i + 1} : lignes régulières`));
+      parseLevel(lvl.rows).forEach(row => row.forEach(c => {
+        if (!c.active) return;
+        assert(letters.includes(c.caseColor) && letters.includes(c.discColor), `niveau ${i + 1} : couleurs connues`);
+        assert(c.caseColor !== c.discColor, `niveau ${i + 1} : pas de disque pré-résolu`);
+      }));
+    });
+  });
+
+  T('niveaux : chaque solution de référence vide le plateau', () => {
+    LEVELS.forEach((lvl, i) => {
+      const g = createGame(lvl.rows);
+      lvl.solution.forEach((b, j) =>
+        assert(g.swap(b) !== null, `niveau ${i + 1} : coup ${j + 1} (${b.x},${b.y},${b.dir}) invalide`));
+      assert(g.isWon(), `niveau ${i + 1} : plateau non vide après la solution`);
+    });
+  });
+
+  return failures;
+}
+</script>
+<script id="main">
+'use strict';
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const levelLabel = document.getElementById('level-label');
+const counterEl = document.getElementById('counter');
+const overlay = document.getElementById('overlay');
+const home = document.getElementById('home');
+
+const SWAP_MS = 120, RESOLVE_MS = 150;
+const SYMBOLS = { B: '▲', G: '■', P: '●', R: '✚', Y: '★', C: '◆' }; // mode daltonien
+
+let game = null;
+let current = 0;
+let moves = 0;      // coups joués sur le niveau en cours
+let hover = null;   // frontière survolée ou null
+let anim = null;    // {phase:'swap'|'resolve', start, moves, resolved}
+
+// ---- Sauvegarde automatique (localStorage) ----
+const SAVE_KEY = 'vasaris-save';
+const save = { maxReached: 0, completed: [], best: {}, sound: false, symbols: false };
+try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+
+// ---- Sons synthétiques, très discrets ----
+let audioCtx = null;
+function beep(freq, dur, type, gain, delay = 0) {
+  if (!save.sound) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime + delay;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur);
+  } catch (e) {}
+}
+const sndSwap = () => beep(180, 0.05, 'triangle', 0.04);
+const sndResolve = () => beep(523, 0.10, 'sine', 0.05);
+const sndWin = () => { beep(392, 0.11, 'sine', 0.05); beep(523, 0.11, 'sine', 0.05, 0.10); beep(659, 0.16, 'sine', 0.05, 0.20); };
+
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * f);
+  const g = Math.round(((n >> 8) & 255) * f);
+  const b = Math.round((n & 255) * f);
+  return `rgb(${r},${g},${b})`;
+}
+
+function loadLevel(i) {
+  current = i;
+  save.maxReached = Math.max(save.maxReached, i);
+  persist();
+  game = createGame(LEVELS[i].rows);
+  moves = 0;
+  hover = null;
+  anim = null;
+  home.style.display = 'none';
+  updateHud();
+}
+
+function geo() {
+  // réserve les bandes HUD (haut) et compteur (bas) : le plateau ne glisse jamais dessous
+  const dpr = window.devicePixelRatio || 1;
+  const hudH = 64 * dpr, botH = 44 * dpr;
+  const g = boardGeometry(game.width, game.height, canvas.width, canvas.height - hudH - botH);
+  return { size: g.size, ox: g.ox, oy: g.oy + hudH };
+}
+
+function cellCenter(p, g) {
+  return { x: g.ox + (p.x + 0.5) * g.size, y: g.oy + (p.y + 0.5) * g.size };
+}
+
+function cellRect(x, y, g) {
+  const gap = g.size * 0.06;
+  return { x: g.ox + x * g.size + gap / 2, y: g.oy + y * g.size + gap / 2, w: g.size - gap, h: g.size - gap };
+}
+
+function drawDisc(cx, cy, size, color) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.30, 0, Math.PI * 2);
+  ctx.fillStyle = COLORS[color];
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, size * 0.05); // liseré noir épais : sépare le disque de la case, désormais de même teinte
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+  if (save.symbols) { // mode daltonien : symbole noir au centre du disque
+    ctx.fillStyle = '#000';
+    ctx.font = `${Math.round(size * 0.26)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(SYMBOLS[color], cx, cy + size * 0.01);
+  }
+}
+
+function render(now) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const g = geo();
+  const isPending = (x, y) => anim !== null && anim.resolved.some(p => p.x === x && p.y === y);
+  const inSwapMove = (x, y) => anim !== null && anim.phase === 'swap' &&
+    anim.moves.some(m => (m.to.x === x && m.to.y === y));
+
+  for (let y = 0; y < game.height; y++) {
+    for (let x = 0; x < game.width; x++) {
+      const r = cellRect(x, y, g);
+      ctx.fillStyle = '#101010'; // emplacement : les trous restent visibles
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      const c = game.cell(x, y);
+
+      if (anim && anim.phase === 'resolve' && isPending(x, y)) {
+        // flash blanc léger + fondu vers le noir
+        const t = Math.min(1, (now - anim.start) / RESOLVE_MS);
+        ctx.fillStyle = shade(COLORS[c.caseColor], 1 - t);
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.fillStyle = `rgba(255,255,255,${(0.7 * (1 - t)).toFixed(3)})`;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        continue;
+      }
+
+      // pendant la phase swap, une cellule logiquement résolue reste dessinée
+      if (!c.active && !(anim && anim.phase === 'swap' && isPending(x, y))) continue;
+
+      ctx.fillStyle = COLORS[c.caseColor]; // couleur EXACTE, identique à celle des disques
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      if (save.symbols) { // mode daltonien : symbole discret dans le coin de la case
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.font = `${Math.round(g.size * 0.16)}px sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(SYMBOLS[c.caseColor], r.x + g.size * 0.06, r.y + g.size * 0.05);
+      }
+      if (!inSwapMove(x, y)) drawDisc(r.x + r.w / 2, r.y + r.h / 2, g.size, c.discColor);
+    }
+  }
+
+  if (anim && anim.phase === 'swap') {
+    const e = easeInOut(Math.min(1, (now - anim.start) / SWAP_MS));
+    for (const m of anim.moves) {
+      const from = cellCenter(m.from, g);
+      const to = cellCenter(m.to, g);
+      drawDisc(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e, g.size, m.color);
+    }
+  }
+
+  if (hover && !anim) {
+    const { mx, my } = borderMidpoint(hover, g);
+    const inset = g.size * 0.18;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (hover.dir === 'H') { ctx.moveTo(mx, my - g.size / 2 + inset); ctx.lineTo(mx, my + g.size / 2 - inset); }
+    else { ctx.moveTo(mx - g.size / 2 + inset, my); ctx.lineTo(mx + g.size / 2 - inset, my); }
+    ctx.stroke();
+  }
+}
+
+function updateHud() {
+  levelLabel.textContent = `NIVEAU ${current + 1}/${LEVELS.length}`;
+  const par = LEVELS[current].solution.length;
+  const best = save.best[current];
+  counterEl.textContent = `COUPS ${moves} · SOLUBLE EN ${par}` + (best ? ` · RECORD ${best}` : '');
+}
+
+function showHome() {
+  const grid = document.getElementById('levels');
+  grid.textContent = '';
+  LEVELS.forEach((lvl, i) => {
+    const b = document.createElement('button');
+    b.textContent = i + 1;
+    b.disabled = i > save.maxReached;
+    if (save.completed[i]) b.classList.add('done');
+    b.addEventListener('click', () => loadLevel(i));
+    grid.appendChild(b);
+  });
+  document.getElementById('opt-sound').textContent = `SON : ${save.sound ? 'OUI' : 'NON'}`;
+  document.getElementById('opt-symbols').textContent = `SYMBOLES : ${save.symbols ? 'OUI' : 'NON'}`;
+  home.style.display = 'flex';
+}
+
+function onWin() {
+  save.completed[current] = true;
+  save.best[current] = Math.min(save.best[current] || Infinity, moves);
+  sndWin();
+  if (current + 1 < LEVELS.length) {
+    save.maxReached = Math.max(save.maxReached, current + 1);
+    persist();
+    loadLevel(current + 1);
+  } else {
+    persist();
+    overlay.style.display = 'flex';
+  }
+}
+
+document.getElementById('restart').addEventListener('click', () => loadLevel(current));
+document.getElementById('home-btn').addEventListener('click', showHome);
+document.getElementById('replay').addEventListener('click', () => {
+  overlay.style.display = 'none';
+  showHome();
+});
+document.getElementById('opt-sound').addEventListener('click', () => {
+  save.sound = !save.sound;
+  persist();
+  document.getElementById('opt-sound').textContent = `SON : ${save.sound ? 'OUI' : 'NON'}`;
+  sndResolve(); // petit aperçu du volume
+});
+document.getElementById('opt-symbols').addEventListener('click', () => {
+  save.symbols = !save.symbols;
+  persist();
+  document.getElementById('opt-symbols').textContent = `SYMBOLES : ${save.symbols ? 'OUI' : 'NON'}`;
+});
+window.addEventListener('keydown', ev => {
+  if (overlay.style.display === 'flex') return;
+  if (ev.key === 'Escape') { showHome(); return; }
+  if (home.style.display === 'flex') return;
+  if (ev.key === 'r' || ev.key === 'R') loadLevel(current);
+  if (ev.key === 'ArrowLeft' && current > 0) loadLevel(current - 1);
+  if (ev.key === 'ArrowRight' && current < save.maxReached) loadLevel(current + 1);
+});
+
+function pointerPos(ev) {
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  return { px: (ev.clientX - rect.left) * scale, py: (ev.clientY - rect.top) * scale };
+}
+
+canvas.addEventListener('pointermove', ev => {
+  const { px, py } = pointerPos(ev);
+  hover = anim ? null : nearestBorder(px, py, game, geo());
+});
+
+canvas.addEventListener('pointerdown', ev => {
+  ev.preventDefault(); // pas d'événements souris synthétiques ni de sélection sur mobile
+  if (anim) return;
+  const { px, py } = pointerPos(ev);
+  const border = nearestBorder(px, py, game, geo());
+  if (border) startSwap(border);
+});
+canvas.addEventListener('contextmenu', ev => ev.preventDefault()); // pas de menu au toucher long
+
+function startSwap(border) {
+  const n = game.neighbor(border);
+  const a = { x: border.x, y: border.y };
+  const da = game.cell(a.x, a.y).discColor;
+  const db = game.cell(n.x, n.y).discColor;
+  const result = game.swap(border);
+  if (!result) return;
+  moves++;
+  sndSwap();
+  updateHud();
+  hover = null;
+  anim = {
+    phase: 'swap',
+    start: performance.now(),
+    moves: [{ from: a, to: n, color: da }, { from: n, to: a, color: db }],
+    resolved: result.resolved,
+  };
+}
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(innerWidth * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+}
+window.addEventListener('resize', resize);
+
+function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); }
+
+function tick(now) {
+  if (anim) {
+    const dur = anim.phase === 'swap' ? SWAP_MS : RESOLVE_MS;
+    if (now - anim.start >= dur) {
+      if (anim.phase === 'swap' && anim.resolved.length > 0) {
+        sndResolve();
+        anim = { phase: 'resolve', start: now, moves: [], resolved: anim.resolved };
+      } else {
+        anim = null;
+        if (game.isWon()) onWin();
+      }
+    }
+  }
+  render(now);
+  requestAnimationFrame(tick);
+}
+
+resize();
+loadLevel(Math.min(save.maxReached, LEVELS.length - 1)); // reprend où on en était
+showHome(); // ... mais on arrive sur l'accueil
+requestAnimationFrame(tick);
+
+// Hors-ligne après la première visite (uniquement en ligne, pas en file://)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+if (location.search.includes('test')) {
+  const banner = document.getElementById('banner');
+  banner.style.display = 'block';
+  const lines = [];
+  const failures = runTests(msg => { lines.push(msg); console.log(msg); });
+  lines.push(failures ? `${failures} ÉCHEC(S)` : 'TOUS LES TESTS PASSENT');
+  banner.textContent = lines.join('\n');
+}
+</script>
+</body>
+</html>
