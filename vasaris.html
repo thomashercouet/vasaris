@@ -8,12 +8,12 @@
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
     font-family: "Consolas", "Courier New", monospace; color: #ccc;
     -webkit-user-select: none; user-select: none; touch-action: manipulation; }
-  canvas { display: block; }
+  canvas { display: block; touch-action: none; }
   #hud { position: fixed; top: 0; left: 0; right: 0; display: flex;
     justify-content: center; align-items: center; gap: 18px; padding: 12px;
-    font-size: 16px; letter-spacing: 2px; }
+    font-size: 16px; letter-spacing: 2px; pointer-events: none; }
   #hud button { background: none; border: 1px solid #444; color: #ccc;
-    font: inherit; padding: 4px 14px; cursor: pointer; }
+    font: inherit; padding: 4px 14px; cursor: pointer; pointer-events: auto; }
   #hud button:disabled { opacity: 0.3; cursor: default; }
   #overlay { position: fixed; inset: 0; display: none; flex-direction: column;
     justify-content: center; align-items: center; gap: 24px;
@@ -438,6 +438,7 @@ document.getElementById('replay').addEventListener('click', () => {
   loadLevel(0);
 });
 window.addEventListener('keydown', ev => {
+  if (overlay.style.display === 'flex') return;
   if (ev.key === 'r' || ev.key === 'R') loadLevel(current);
   if (ev.key === 'ArrowLeft' && current > 0) loadLevel(current - 1);
   if (ev.key === 'ArrowRight' && current < maxReached) loadLevel(current + 1);
